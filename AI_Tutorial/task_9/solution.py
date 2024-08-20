@@ -1,51 +1,48 @@
 """
-TASK 9
-Lets add chat history and possibility of reading a specific book.
+TASK 9 - Solution
+Lets make a full chatbot with tools and such.
 
-do list:
-    - See how we can use the context for message generation
-    - Discussion: how could we improve the answering of the bible chat?
+Read the code. Play with the queries. Make custom tools.
+This is final waypoint before you design your custom AI assistant.
 """
 
-# import openai for the AI stuff, os for importing the key from environment
-import openai
-import os
 import numpy as np
 import json
-import faiss
-import time
-import re
+
 from typing import Dict, List, Literal
-from pathlib import Path
-from utils import load
+
+from AI_Tutorial.akkodis_clients import client_gpt_4o
+from AI_Tutorial.task_7.solution import get_bible_vectorstore
 from openai.types.chat import (ChatCompletionToolMessageParam,
                                ChatCompletionSystemMessageParam,
                                ChatCompletionUserMessageParam,
                                ChatCompletionAssistantMessageParam,
                                )
 
-'''
-****************************************************************************
-Step 1:
-Load bible text file to some structure which you can easily search in.
-my approach:
-{testament: { bookX: {verseY: text },},}
-'''
-index, metadata, the_bible_dictionary, client = load()
+
+# load all needed stuff from task 7 as in task 8
+index, metadata, the_bible_dictionary, client_ada, model_ada = get_bible_vectorstore()
+
+# this time we will need client for chat completion
+client_gpt, gpt_model = client_gpt_4o()
 
 
-'''
-****************************************************************************
-Step 2:
-Define all the tools our bot can use
-'''
+# Now we define tools that our chatbot can use. You know first tool from other tasks and the rest is simple.
 def search_similar(query: str) -> str:
-    query_embedding = np.array([client.embeddings.create(
-        model='text-embedding-3-small',
-        input=['query']
+    """ Make a similarity search in your vectorstore and assemble it into a context string
+
+    Args:
+        query: A string for which we want to retrieve most similar parts of the bible.
+
+    Returns:
+        A context string with retrieved parts of the bible.
+    """
+
+    query_embedding = np.array([client_ada.embeddings.create(
+        model=model_ada,
+        input=[query]
     ).data[0].embedding])
     D, I = index.search(query_embedding, 10)
-    # print(D, I)
     context = ""
     current_testament = ""
     current_book = ""
@@ -63,10 +60,26 @@ def search_similar(query: str) -> str:
 
 
 def book_list() -> List[str]:
+    """ Return list of all books in the bible (something like chapters)
+
+    Args:
+        None
+
+    Returns:
+        A list of book names in the bible (both testaments)
+    """
     return list(the_bible_dictionary['Old testament'].keys()) + list(the_bible_dictionary['New testament'].keys())
 
 
 def book_verses(book: str) -> List[str]:
+    """ Return list of verse numbers for a given book.
+
+    Args:
+        book: Name of a book for which we want list of verses (name will be validated in the function)
+
+    Returns:
+        List of verse numbers if book exists.
+    """
     if book not in book_list():
         return [f"Book {book} does not exist."]
 
@@ -75,6 +88,13 @@ def book_verses(book: str) -> List[str]:
 
 
 def read_book_verse(book: str, verse: str) -> str:
+    """ Read a specific verse from a specific book (verse number is given as number)
+
+    Args:
+        book: Name of a book from which we want to read.
+        verse: Number of the verse as string (i.e. 6:22) which we want to read.
+
+    """
     if book not in book_list():
         return f"Book {book} does not exist."
     if verse not in book_verses(book):
@@ -84,11 +104,11 @@ def read_book_verse(book: str, verse: str) -> str:
     text = verse + the_bible_dictionary[testament][book][verse]
     return text
 
-'''
-****************************************************************************
-Step 2.5:
-Create list of dictionaries describing the tools
-'''
+
+# Now we have to create a list of all tools that gpt can call.
+# Look at openai documentation about tool calls.
+# Generally you define function name and description, its arguments, their types and description.
+# GPT can then create a request for your side to call that function
 tools = [
 {
     'type': 'function',
@@ -138,10 +158,10 @@ tools = [
                     },
                     "verse": {
                         "type": "string",
-                        "description": "The verse of the book to read (like 1:1, 20:48...)",
+                        "description": "A single verse of the book to read (i.e 16:24). Range of verses is not supported",
                     },
                 },
-                "required": ["book"],
+                "required": ["book", "verse"],
             },
     }
 },
@@ -161,17 +181,14 @@ tools = [
 
 ]
 
-'''
-****************************************************************************
-Step 3:
-Make a history aware chatbot able to call your defined functions
-Dont forget the system message.
-'''
+# define conversation container as in task 3
 messages: List[ChatCompletionUserMessageParam |
                ChatCompletionSystemMessageParam |
                ChatCompletionAssistantMessageParam |
                ChatCompletionToolMessageParam] = []
 
+
+# Prepare system message for your bible agent
 system_message = ChatCompletionSystemMessageParam(role='system',
                                                   content="""
 You are an expert in Gutenberg bible exploration. You try to answer based on accessible context without
@@ -180,8 +197,14 @@ guessing. If you cant find the answer with given tools, say so.
 
 messages.append(system_message)
 
+# Here we define query loop similar to Task 3
+# the difference is that we give gpt a set of tools which can be used. Due to that we have to check responses for
+# such tool calls.
 query = ""
 while True:
+
+    # We wait for user input if last message was ai or system message
+    # if last message was tool response, we just send the conversation to gpt so it gets response to its tool call
     if messages[-1]['role'] == 'assistant' or messages[-1]['role'] == 'system':
         query = input("Enter your message: ")
         if query == "quit":
@@ -190,13 +213,17 @@ while True:
         message = ChatCompletionUserMessageParam(role='user',
                                                  content=query)
         messages.append(message)
-    response = client.chat.completions.create(
-        model="gpt-4o",
+
+    # This is common gpt call like in tasks 1-3 with added tool options
+    response = client_gpt.chat.completions.create(
+        model=gpt_model,
         messages=messages,
         tool_choice='auto',
         tools=tools,
     )
     choice = response.choices[0]
+
+    # Gpt can mix tool call with common answer. We save the answer and extract content of the message
     assistant_msg = ChatCompletionAssistantMessageParam(role='assistant',
                                                         content=choice.message.content,
                                                         tool_calls=choice.message.tool_calls)
@@ -204,6 +231,8 @@ while True:
     if choice.message.content is not None:
         print(choice.message.content)
 
+    # if there was at least one tool call in the response, we evaluate it on our side and we append a tool response
+    # There has to be tool response for every request before adding any other message
     if choice.message.tool_calls:
         for tool in choice.message.tool_calls:
             idcall = tool.id

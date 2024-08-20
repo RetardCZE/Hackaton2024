@@ -3,6 +3,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+*/conf.py
+
 # C extensions
 *.so
 *all_stack.npy

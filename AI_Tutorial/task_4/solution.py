@@ -1,35 +1,50 @@
 """
-TASK 4 - embeddings & RAG
-Now let's do some RAG stuff
-
-do list:
-    - Implement missing parts of the code
-    - see the results, try different query
+TASK 4 - Solution
+Make simple vectorstore and implement naive similarity search.
 """
 
-# import openai for the AI stuff, os for importing the key from environment
-import openai
-import os
+from AI_Tutorial.akkodis_clients import client_ada_002
+from typing import List
+
+# we will need numpy for some math
 import numpy as np
 
 
 # Function to calculate L2 distance
-def l2_distance(vec1, vec2):
+def l2_distance(vec1: List[float], vec2: List[float]) -> float:
+    """Compute L2 distance between 2 vectors
+
+    Args:
+        vec1: First input vector.
+        vec2: Second input vector (of the same size as vec1).
+
+    Returns:
+        L2 distance between input vectors.
+    """
     return np.linalg.norm(np.array(vec1) - np.array(vec2))
 
 
 # Function to calculate cosine similarity
-def cosine_similarity(vec1, vec2):
+def cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
+    """Compute cosine between 2 vectors
+
+    Args:
+        vec1: First input vector.
+        vec2: Second input vector (of the same size as vec1).
+
+    Returns:
+        Cosine between input vectors.
+    """
     dot_product = np.dot(vec1, vec2)
     norm_vec1 = np.linalg.norm(vec1)
     norm_vec2 = np.linalg.norm(vec2)
     return dot_product / (norm_vec1 * norm_vec2)
 
 
-# Initialize OpenAI client
-client = openai.Client(api_key=os.environ.get('OPENAI_API_KEY'))
+# Initialize OpenAI client for embeddings model
+client, model = client_ada_002()
 
-# Generate 10 base strings
+# Here is 10 sample sentences to test in embeddings.
 base_texts = [
     "Cats are great pets and they love to climb trees",
     "Machine learning models can be very complex",
@@ -44,17 +59,19 @@ base_texts = [
 ]
 
 # Generate embeddings for base strings
+# the response will contain 10x embedding object (1 for each text)
 base_embeddings = client.embeddings.create(
-    model='text-embedding-ada-002',
+    model=model,
     input=base_texts
 ).data
 
-# Create a query string
+# Query string (input for which we want similar texts)
 query_text = "Healthy eating and a balanced diet are crucial for well-being"
 
 # Generate embedding for query string
+# Here we save directly the list of floats (embedding vector)
 query_embedding = client.embeddings.create(
-    model='text-embedding-ada-002',
+    model=model,
     input=[query_text]
 ).data[0].embedding
 
