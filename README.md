@@ -1,4 +1,4 @@
-# AKKODIS get started with chatbots
+# AKKODIS get started with chatbots v1.0.0
 @author: Jakub Rosol, (jakub.rosol@akkodis.com)
 
 This guide will take you from zero to hero in topic of AI language models integrations into
@@ -53,17 +53,16 @@ where you can link the environment to the project, and it will be used automatic
 (If you return to already initialized project and you ModuleNotFound indicating that some python
 packages are missing, you may have forgotten to activate the environment.)
 
-### Install requirements
-To run provided examples, you need various python packages.
-If you want to understand what you need better. I would recommend installing them one by one
-as you need them for the tasks.
+### Install the project (or the requirements)
+To run provided examples, you need to install the AI_Tutorial python package and its dependencies.
+(Some IDEs do not need to install the package to be able to work within its structure. You can install
+only the requirements from requirements.txt then.)
 
-If you don't want to bother with the installation, you can install all needed packages with:
 ```bash
 # in the project directory
-pip install -r requirements.txt
+pip install -e .
 ```
-This will install all packages in versions used during guide development.
+This will install all packages and AI_tester package in versions used during guide development.
 
 ### Api key preparation
 Implementation uses [akkodis_clients.py](AI_Tutorial/akkodis_clients.py), which loads api keys and 
@@ -73,9 +72,9 @@ is provided, so you have to copy or rename it to remove the .template suffix.
 
 You can define 3 environmental variables:
 `AKKODIS_API_KEY`, `OPENAI_API_KEY`, `PROVIDER`, which are 
-then loaded by [conf.py](AI_Tutorial/conf.py). If you don't know how to define 
-environmental variable, you can write the information directly to the file (but
-it is not a good practice).
+then loaded by [conf.py](AI_Tutorial/conf.py). **If you don't know how to define 
+environmental variable, you can write the information directly to the file** (but
+it is not a good practice generally).
 
 My recommendation is to place it as string in the code for the tutorial and return to environmental variables
 once you implement your own project. (For example in pycharm you can set variable for a run 
@@ -83,8 +82,7 @@ configuration, which can be useful when you launch your project with something l
 
 ## The tutorial
 The tutorial will take you through 9 tasks where you will learn how to use the API to
-generate text and embeddings. 
-
+generate text and embeddings.
 
 First take a quick look at [akkodis_clients.py](AI_Tutorial/akkodis_clients.py) where you can see how to
 initialize client for communication with api using openai package. 
@@ -108,6 +106,12 @@ we did tool for summarization of reported work, assistant for ticketing systems
 (answer repetitive questions, redirect badly targeted tickets), AI enhanced interface
 for physics modeling engine. Of coarse they were demo versions, but we did them in one day.
 Just be creative.
+
+**Some tips / guide to a good project**
+ - Check out streamlit library as it can help you build nice gui fast.
+ - Test out attacks on your app. You don't necessarily have to fix them,
+   but you should explain them (llm jailbreak, violence messages...).
+ - Do not finetune prompts too early. It can be quite time-consuming with low benefit.
 
 **LAST REMINDER**
  - DO NOT SHARE THE API KEY
