@@ -112,6 +112,9 @@ Just be creative.
  - Test out attacks on your app. You don't necessarily have to fix them,
    but you should explain them (llm jailbreak, violence messages...).
  - Do not finetune prompts too early. It can be quite time-consuming with low benefit.
+ - It is good to define app flow before implementation. (Initialization, data persistence, main events..)
+ - Program functionality should be separated from GUI. (Easy test is running the app in console and checking that it
+   keeps all functionalities except the graphical ones ofc.)
 
 **LAST REMINDER**
  - DO NOT SHARE THE API KEY
